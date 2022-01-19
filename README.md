@@ -62,12 +62,10 @@ ${wordingExecutablePath} generate ${enConfigPath} ${generatedWordingPath} Wordin
 
 
 # ------ Step 3: supplementat all configs ------ #
-if [[ $* == *--download* ]]; then
-  for language in "${languages[@]}"; do
-    configPath="${baseConfigPath}${language}.yml"
-    ${wordingExecutablePath} supplement ${enConfigPath} ${configPath}
-  done
-fi
+for language in "${languages[@]}"; do
+  configPath="${baseConfigPath}${language}.yml"
+  ${wordingExecutablePath} supplement ${enConfigPath} ${configPath}
+done
 ```
 
 ### `Makefile`
