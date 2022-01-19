@@ -1,15 +1,14 @@
 import Foundation
 import SwiftCLI
 
-public final class WordingGenCLI {
-    public init() { }
-
+final class WordingGenCLI {
     private lazy var cli: CLI = {
         let cli = CLI(
             name: "wording",
             version: "1.0.0",
             commands: [
-                WordingGenCommand()
+                WordingGenCommand(),
+                WordingSupplementCommand(),
             ]
         )
 

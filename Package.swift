@@ -33,13 +33,13 @@ let package = Package(
             dependencies: [
                 .product(name: "Yams", package: "Yams"),
                 .product(name: "PathKit", package: "PathKit"),
-                .product(name: "SwiftCLI", package: "SwiftCLI"),
-                .target(name: "Wording")
+                .product(name: "SwiftCLI", package: "SwiftCLI")
             ]
         ),
         .target(
             name: "Wording",
             dependencies: [
+                .product(name: "CoreUtils", package: "CoreUtils"),
                 .product(name: "Yams", package: "Yams")
             ]
         )

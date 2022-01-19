@@ -1,5 +1,5 @@
 public protocol WordingReceiver {
-    associatedtype Wording
+    associatedtype Wording: Wordingable
 
     func receive(_ wording: Wording)
 }

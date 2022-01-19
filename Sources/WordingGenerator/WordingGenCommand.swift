@@ -32,23 +32,25 @@ final class WordingGenCommand: Command {
         structName ?? output.replacingOccurrences(of: ".swift", with: "")
     }
 
-    private func rootConfigNode(at path: String) throws -> Node {
-        let data = try inputPath.read()
+    private var rootConfigNode: Node {
+        get throws {
+            let data = try inputPath.read()
 
-        guard let ymlString = String(
-            data: data,
-            encoding: .utf8
-        ) else {
-            throw WordingGenCommandError.invaidYMLString
+            guard let ymlString = String(
+                data: data,
+                encoding: .utf8
+            ) else {
+                throw WordingGenCommandError.invaidYMLString
+            }
+
+            let parser = try Parser(yaml: ymlString)
+
+            guard let rootNode = try parser.nextRoot() else {
+                throw WordingGenCommandError.emptyYML
+            }
+
+            return rootNode
         }
-
-        let parser = try Parser(yaml: ymlString)
-
-        guard let rootNode = try parser.nextRoot() else {
-            throw WordingGenCommandError.emptyYML
-        }
-
-        return rootNode
     }
 
     private func createOutputFileIfNeeded() throws {
@@ -148,9 +150,9 @@ final class WordingGenCommand: Command {
     }
 
     private func writeWordingableConformance() throws {
-        let root = try rootConfigNode(at: input)
+        let root = try rootConfigNode
         var body: String = ""
-        traverseNode(root) { chain in
+        traverse(root) { chain in
             let chainString = chain.map { "_\($0)" }.joined(separator: "?.")
             let bodyLine = "if \(chainString) == nil { \(chainString) = fallback.\(chainString) }".indented(1)
             body.append(bodyLine)
@@ -175,7 +177,7 @@ final class WordingGenCommand: Command {
         )
     }
 
-    private func traverseNode(
+    private func traverse(
         _ node: Node,
         chain: [String] = [],
         chainBlock: ([String]) -> Void
@@ -190,13 +192,12 @@ final class WordingGenCommand: Command {
             let newChain = chain + [string]
             chainBlock(newChain)
 
-            traverseNode(
+            traverse(
                 value,
                 chain: newChain,
                 chainBlock: chainBlock
             )
         }
-
     }
 
     // MARK: - Routable
@@ -212,7 +213,7 @@ final class WordingGenCommand: Command {
     // MARK: - Command
 
     func execute() throws {
-        let root = try rootConfigNode(at: input)
+        let root = try rootConfigNode
 
         try createOutputFileIfNeeded()
         try writeHeader()

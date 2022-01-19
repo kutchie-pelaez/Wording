@@ -1,3 +1,4 @@
+import CoreUtils
 import Foundation
 import Yams
 
@@ -9,6 +10,6 @@ public struct WordingEncoder<Wording: Wordingable> {
     public func encode(_ wording: Wording) throws -> Data {
         let ymlString = try ymlEncoder.encode(wording)
 
-        return ymlString.data(using: .utf8) ?? Data()
+        return ymlString.utf8Data
     }
 }
