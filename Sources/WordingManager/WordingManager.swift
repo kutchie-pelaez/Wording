@@ -129,7 +129,7 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
         cache[localization] = wording
     }
 
-    // MARK: - Provideing fallback
+    // MARK: - Providing fallback
 
     private func mutateWordingWithFallbacks(
         _ wording: inout Wording,
@@ -154,8 +154,6 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
                     try persistFetchedWording(wording, for: localization)
                     cache[localization] = wording
                     eventPassthroughSubject.send(.wordingDidFetch(localization))
-
-                    logger.log("Successfully fetched wording for \(localization) localization")
                 } catch let error {
                     logger.error("Failed to update wording for \(localization) localization: \(error.localizedDescription)")
                 }
