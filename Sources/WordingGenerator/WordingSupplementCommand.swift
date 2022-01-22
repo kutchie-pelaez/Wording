@@ -3,8 +3,6 @@ import PathKit
 import SwiftCLI
 import Yams
 
-private let executableParentPath = Path(ProcessInfo.processInfo.arguments[0]).parent()
-
 enum WordingSupplementCommandError: Error {
     case invaidYMLString
     case emptyYML
@@ -20,11 +18,11 @@ final class WordingSupplementCommand: Command {
     // MARK: -
 
     private var supplementerPath: Path {
-        executableParentPath + supplementer
+        Path(supplementer)
     }
 
     private var supplementeePath: Path {
-        executableParentPath + supplementee
+        Path(supplementee)
     }
 
     private func rootNode(at path: Path) throws -> Node {

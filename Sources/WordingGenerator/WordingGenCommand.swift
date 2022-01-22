@@ -3,8 +3,6 @@ import PathKit
 import SwiftCLI
 import Yams
 
-private let executableParentPath = Path(ProcessInfo.processInfo.arguments[0]).parent()
-
 enum WordingGenCommandError: Error {
     case invaidYMLString
     case emptyYML
@@ -21,11 +19,11 @@ final class WordingGenCommand: Command {
     // MARK: -
 
     private var inputPath: Path {
-        executableParentPath + input
+        Path(input)
     }
 
     private var outputPath: Path {
-        executableParentPath + output
+        Path(output)
     }
 
     private var computedStructName: String {
@@ -113,8 +111,8 @@ final class WordingGenCommand: Command {
 
                 try appendWordingString(
                     """
-                    public var \(key): \(type) { _\(key)! }
-                    fileprivate var _\(key): \(type)?
+                    public var \(key): \(type.tickedIfNeeded()) { _\(key)! }
+                    fileprivate var _\(key): \(type.tickedIfNeeded())?
                     """.indented(indentation).newLined(index == keys.count - 1 ? 1 : 2)
                 )
             }
@@ -123,12 +121,13 @@ final class WordingGenCommand: Command {
                 guard value.scalar?.style != .plain else { continue }
 
                 let key = mapping.keys[index]
+                let structName = key.string?.capitalizingFirstLetter() ?? ""
 
                 try appendWordingString("\n")
                 
                 try appendWordingString(
                     """
-                    public struct \(key.string?.capitalized ?? ""): Codable {
+                    public struct \(structName.tickedIfNeeded()): Codable {
                     """.indented(indentation).newLined(1)
                 )
 
@@ -237,5 +236,22 @@ extension String {
     fileprivate func newLined(_ count: Int) -> String {
         self + Array(repeating: "\n", count: count)
             .joined()
+    }
+
+    private static var namesThatShouldBeTicked: [String] {
+        [
+            "Type",
+            "class",
+            "struct",
+            "continue",
+        ]
+    }
+
+    fileprivate func tickedIfNeeded() -> String {
+        guard Self.namesThatShouldBeTicked.contains(self) else {
+            return self
+        }
+
+        return "`\(self)`"
     }
 }

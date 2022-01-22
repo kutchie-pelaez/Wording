@@ -42,7 +42,7 @@ wordingExecutablePath=""
 baseConfigPath="..."
 baseRemoteConfigPath="..."
 
-enConfigPath="${baseConfigPath}>en"
+enConfigPath="${baseConfigPath}en.yml"
 
 
 # ------ Step 1: download wording for all languages if needed ------ #
