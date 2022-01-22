@@ -100,12 +100,13 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
                 )
 
                 logger.log("Successfully populate cache with \(wordingType) wording for \(localization) localization")
-            } catch let error {
+            } catch {
                 logger.error("Failed to populate cache with \(wordingType) wording for \(localization) localization: \(error.localizedDescription)")
 
                 if assertOnFailure {
                     appAssertionFailure()
                 }
+
                 continue
             }
         }
@@ -128,35 +129,41 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
         _ wording: inout Wording,
         using localization: Localization
     ) {
-        if let localizedWorindgInCache = cache[localization] {
-            wording.mutate(using: localizedWorindgInCache)
+        if
+            localization != .en,
+            let cachedLocalizedWording = cache[localization]
+        {
+            wording.mutate(using: cachedLocalizedWording)
         }
-        if let enWorindgInCache = cache["en"] {
-            wording.mutate(using: enWorindgInCache)
+
+        if let cachedEnWording = cache[.en] {
+            wording.mutate(using: cachedEnWording)
         }
     }
 
     // MARK: - Fetching & persisting
 
-    private func fetchWordingForAllLocalizations() {
-        for localization in localizationManager.supportedLocalizations.englishFirst {
-            Task {
-                do {
-                    let wording = try await fetchWording(for: localization)
+    private func fetchWordingForAllLocalizations() async throws {
+        for localization in localizationManager.supportedLocalizations.localizationFirst(localizationManager.language.localization) {
+            do {
+                let wording = try await fetchWording(for: localization)
 
-                    try persistFetchedWording(wording, for: localization)
-                    cache[localization] = wording
-                    eventPassthroughSubject.send(.wordingDidFetch(localization))
-                } catch let error {
-                    logger.error("Failed to update wording for \(localization) localization: \(error.localizedDescription)")
-                }
+                try persistFetchedWording(
+                    wording,
+                    for: localization
+                )
+
+                cache[localization] = wording
+                eventPassthroughSubject.send(.wordingDidFetch(localization))
+            } catch WordingManagerProviderError.noRemoteWordingSupported {
+                break
+            } catch {
+                logger.error("Failed to update wording for \(localization) localization: \(error.localizedDescription)")
             }
         }
     }
 
     private func fetchWording(for localization: Localization) async throws -> Wording {
-        logger.log("Fetching wording for \(localization) localization")
-
         let wordingData = try await provider.wordingRemoteData(for: localization)
         var wording = try decoder.decode(from: wordingData)
 
@@ -183,7 +190,9 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
     // MARK: - Startable
 
     public func start() {
-        fetchWordingForAllLocalizations()
+        Task {
+            try await fetchWordingForAllLocalizations()
+        }
     }
 
     // MARK: - Public interface
@@ -197,8 +206,12 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
     }
 
     public func wording(for localization: Localization) -> Wording {
-        undefinedIfNil(
+        safeUndefinedIfNil(
             cache[localization],
+            undefinedIfNil(
+                cache[.en],
+                "Failed to get cached en wording"
+            ),
             "Failed to get cached wording for \(localization) localization"
         )
     }
