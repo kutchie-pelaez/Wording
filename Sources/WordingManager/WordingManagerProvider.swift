@@ -1,3 +1,4 @@
+import CoreUtils
 import Foundation
 import Language
 
@@ -13,5 +14,9 @@ extension WordingManagerProvider {
             .documents
             .appendingPathComponent("wording")
             .appendingPathComponent("wording_\(localization.identifier).yml")
+    }
+
+    public func wordingRemoteData(for localization: Localization) async throws -> Data {
+        throw WordingManagerProviderError.noRemoteWordingSupported
     }
 }

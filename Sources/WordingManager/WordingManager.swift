@@ -20,14 +20,11 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
         subscribeToEvents()
     }
 
-    private typealias WordingBlock = (Wording) -> ()
-
     private let localizationManager: LocalizationManager
     private unowned let provider: WordingManagerProvider
 
-    private let eventPassthroughSubject = PassthroughSubject<WordingEvent, Never>()
+    private let eventPassthroughSubject = PassthroughSubject<WordingEvent<Wording>, Never>()
     private var cancellables = [AnyCancellable]()
-    private var receivers = WeakArray<WordingBlock>()
 
     private var cache = [Localization: Wording]()
     private let decoder = WordingDecoder<Wording>()
@@ -65,15 +62,11 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
                 wordingDidFetchedEvents
             )
             .sink { [weak self] in
-                self?.notifyRecieversWithCurrentWording()
+                guard let wording = self?.wording else { return }
+
+                self?.eventPassthroughSubject.send(.wordingDidChange(wording))
             }
             .store(in: &cancellables)
-    }
-
-    private func notifyRecieversWithCurrentWording() {
-        receivers.forEach {
-            $0(wording)
-        }
     }
 
     // MARK: - Initial cache populating
@@ -195,30 +188,18 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
 
     // MARK: - Public interface
 
-    public var wording: Wording {
-        wording(for: localizationManager.language.localization)
+    public var eventPublisher: ValuePublisher<WordingEvent<Wording>> {
+        eventPassthroughSubject.eraseToAnyPublisher()
     }
 
-    public var eventPublisher: ValuePublisher<WordingEvent> {
-        eventPassthroughSubject
-            .eraseToAnyPublisher()
+    public var wording: Wording {
+        wording(for: localizationManager.language.localization)
     }
 
     public func wording(for localization: Localization) -> Wording {
         undefinedIfNil(
             cache[localization],
             "Failed to get cached wording for \(localization) localization"
-        )
-    }
-
-    public func register<Receiver>(wordingReceiver: Receiver) where Receiver: WordingReceiver, Receiver.Wording == Wording {
-        wordingReceiver.receive(wording)
-
-        let objectReceiver = wordingReceiver as AnyObject
-        receivers.append(
-            { [weak objectReceiver] wording in
-                (objectReceiver as? Receiver)?.receive(wording)
-            }
         )
     }
 }
