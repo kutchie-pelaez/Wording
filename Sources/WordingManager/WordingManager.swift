@@ -164,7 +164,7 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
     private func fetchWording(for localization: Localization) async throws -> Wording {
         logger.log("Fetching wording for \(localization) localization")
 
-        let wordingData = await provider.wordingRemoteData(for: localization)
+        let wordingData = try await provider.wordingRemoteData(for: localization)
         var wording = try decoder.decode(from: wordingData)
 
         logger.log("Successfully fetched wording for \(localization) localization")

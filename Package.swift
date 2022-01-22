@@ -8,8 +8,18 @@ let package = Package(
         .iOS("15")
     ],
     products: [
-        .library(name: "WordingManager", targets: ["WordingManager"]),
-        .library(name: "Wording", targets: ["Wording"])
+        .library(
+            name: "WordingManager",
+            targets: [
+                "WordingManager"
+            ]
+        ),
+        .library(
+            name: "Wording",
+            targets: [
+                "Wording"
+            ]
+        )
     ],
     dependencies: [
         .package(name: "LocalizationManager", url: "https://github.com/kutchie-pelaez-packages/LocalizationManager", .branch("master")),
