@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "WordingManager",
+    name: "Wording",
     platforms: [
         .iOS("15")
     ],
@@ -29,18 +29,18 @@ let package = Package(
             ]
         ),
         .target(
+            name: "Wording",
+            dependencies: [
+                .product(name: "CoreUtils", package: "CoreUtils"),
+                .product(name: "Yams", package: "Yams")
+            ]
+        ),
+        .target(
             name: "WordingGenerator",
             dependencies: [
                 .product(name: "Yams", package: "Yams"),
                 .product(name: "PathKit", package: "PathKit"),
                 .product(name: "SwiftCLI", package: "SwiftCLI")
-            ]
-        ),
-        .target(
-            name: "Wording",
-            dependencies: [
-                .product(name: "CoreUtils", package: "CoreUtils"),
-                .product(name: "Yams", package: "Yams")
             ]
         )
     ]
