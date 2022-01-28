@@ -1,5 +1,5 @@
 import Combine
-import CoreUtils
+import Core
 import Foundation
 import Language
 import LocalizationManager
