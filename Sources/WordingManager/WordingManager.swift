@@ -23,50 +23,29 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
     private let localizationManager: LocalizationManager
     private unowned let provider: WordingManagerProvider
 
-    private let eventPassthroughSubject = PassthroughSubject<WordingEvent<Wording>, Never>()
     private var cancellables = [AnyCancellable]()
 
     private var cache = [Localization: Wording]()
     private let decoder = WordingDecoder<Wording>()
     private let encoder = WordingEncoder<Wording>()
 
+    private lazy var _wordingSubject = MutableValueSubject<Wording>(
+        wording(for: localizationManager.languageSubject.value.localization)
+    )
+
     // MARK: - Subscribe to events
 
     private func subscribeToEvents() {
-        let languageDidChangeEvents = localizationManager.eventPublisher
-            .filter { event in
-                if case .languageDidChange = event {
-                    return true
-                }
-
-                return false
-            }
-            .asVoid()
-
-        let wordingDidFetchedEvents = eventPublisher
-            .filter { [weak self] event in
-                if
-                    case let .wordingDidFetch(localization) = event,
-                    localization == self?.localizationManager.language.localization
-                {
-                    return true
-                }
-
-                return false
-            }
-            .asVoid()
-
-        Publishers
-            .Merge(
-                languageDidChangeEvents,
-                wordingDidFetchedEvents
-            )
-            .sink { [weak self] in
-                guard let wording = self?.wording else { return }
-
-                self?.eventPassthroughSubject.send(.wordingDidChange(wording))
+        localizationManager.languageSubject
+            .sink { [weak self] newLanguage in
+                self?.syncWording(for: newLanguage.localization)
             }
             .store(in: &cancellables)
+    }
+
+    private func syncWording(for localization: Localization) {
+        let newWording = wording(for: localization)
+        _wordingSubject.value = newWording
     }
 
     // MARK: - Initial cache populating
@@ -141,10 +120,21 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
         }
     }
 
+    private func wording(for localization: Localization) -> Wording {
+        safeUndefinedIfNil(
+            cache[localization],
+            undefinedIfNil(
+                cache[.en],
+                "Failed to get cached en wording"
+            ),
+            "Failed to get cached wording for \(localization) localization"
+        )
+    }
+
     // MARK: - Fetching & persisting
 
     private func fetchWordingForAllLocalizations() async throws {
-        for localization in localizationManager.supportedLocalizations.localizationFirst(localizationManager.language.localization) {
+        for localization in localizationManager.supportedLocalizations.localizationFirst(localizationManager.languageSubject.value.localization) {
             do {
                 let wording = try await fetchWording(for: localization)
 
@@ -154,7 +144,7 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
                 )
 
                 cache[localization] = wording
-                eventPassthroughSubject.send(.wordingDidFetch(localization))
+                syncWording(for: localization)
             } catch WordingManagerProviderError.noRemoteWordingSupported {
                 break
             } catch {
@@ -197,22 +187,5 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
 
     // MARK: - Public interface
 
-    public var eventPublisher: ValuePublisher<WordingEvent<Wording>> {
-        eventPassthroughSubject.eraseToAnyPublisher()
-    }
-
-    public var wording: Wording {
-        wording(for: localizationManager.language.localization)
-    }
-
-    public func wording(for localization: Localization) -> Wording {
-        safeUndefinedIfNil(
-            cache[localization],
-            undefinedIfNil(
-                cache[.en],
-                "Failed to get cached en wording"
-            ),
-            "Failed to get cached wording for \(localization) localization"
-        )
-    }
+    public var wordingSubject: ValueSubject<Wording> { _wordingSubject }
 }
