@@ -1,4 +1,4 @@
-# WordingManager
+# Wording
 
 ## Usage
 
