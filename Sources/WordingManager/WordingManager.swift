@@ -21,7 +21,7 @@ public final class WordingManager<Wording>: Startable where Wording: Wordingable
     }
 
     private let localizationManager: LocalizationManager
-    private unowned let provider: WordingManagerProvider
+    private let provider: WordingManagerProvider
 
     private var cancellables = [AnyCancellable]()
 
