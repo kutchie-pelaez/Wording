@@ -8,7 +8,7 @@ import os
 
 private let logger = Logger("wording")
 
-public final class WordingManager<Wording>: Startable where Wording: Wordingable {
+public final class WordingManagerImpl<Wording>: Startable where Wording: Wordingable {
     init(
         localizationManager: LocalizationManager,
         provider: WordingManagerProvider

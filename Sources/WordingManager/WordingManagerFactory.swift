@@ -7,8 +7,8 @@ public struct WordingManagerFactory {
     public func produce<Wording>(
         localizationManager: LocalizationManager,
         provider: WordingManagerProvider
-    ) -> WordingManager<Wording> where Wording: Wordingable {
-        WordingManager<Wording>(
+    ) -> WordingManagerImpl<Wording> where Wording: Wordingable {
+        WordingManagerImpl<Wording>(
             localizationManager: localizationManager,
             provider: provider
         )
