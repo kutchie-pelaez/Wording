@@ -1,2 +1,2 @@
-let cli = WordingGenCLI()
+let cli = WordingCLI()
 cli.execute()

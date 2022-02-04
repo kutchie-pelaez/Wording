@@ -11,9 +11,11 @@ enum WordingSupplementCommandError: Error {
 
 final class WordingSupplementCommand: Command {
 
-    @Param var supplementer: String
+    @Param
+    var supplementer: String
 
-    @Param var supplementee: String
+    @Param
+    var supplementee: String
 
     // MARK: -
 

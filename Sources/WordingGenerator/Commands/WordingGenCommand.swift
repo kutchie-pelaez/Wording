@@ -10,11 +10,14 @@ enum WordingGenCommandError: Error {
 
 final class WordingGenCommand: Command {
 
-    @Param var input: String
+    @Param
+    var input: String
 
-    @Param var output: String
+    @Param
+    var output: String
 
-    @Param var structName: String?
+    @Param
+    var structName: String?
 
     // MARK: -
 
