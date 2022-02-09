@@ -3,17 +3,17 @@ import Core
 import Foundation
 import Language
 import LocalizationManager
+import Logger
 import Wording
-import os
-
-private let logger = Logger("wording")
 
 public final class WordingManagerImpl<Wording>: Startable where Wording: Wordingable {
     init(
         localizationManager: LocalizationManager,
+        logger: Logger,
         provider: WordingManagerProvider
     ) {
         self.localizationManager = localizationManager
+        self.logger = logger
         self.provider = provider
         populateCahceWithBundledWording()
         populateCahceWithPersistedWording()
@@ -21,6 +21,7 @@ public final class WordingManagerImpl<Wording>: Startable where Wording: Wording
     }
 
     private let localizationManager: LocalizationManager
+    private let logger: Logger
     private let provider: WordingManagerProvider
 
     private var cancellables = [AnyCancellable]()
@@ -78,12 +79,12 @@ public final class WordingManagerImpl<Wording>: Startable where Wording: Wording
                     for: localization
                 )
 
-                logger.log("Successfully populate cache with \(wordingType) wording for \(localization) localization")
+                logger.log("Successfully populate cache with \(wordingType) wording for \(localization) localization", domain: .wording)
             } catch {
-                logger.error("Failed to populate cache with \(wordingType) wording for \(localization) localization: \(error.localizedDescription)")
+                logger.error("Failed to populate cache with \(wordingType) wording for \(localization) localization: \(error.localizedDescription)", domain: .wording)
 
                 if assertOnFailure {
-                    appAssertionFailure()
+                    safeCrash()
                 }
 
                 continue
@@ -148,7 +149,7 @@ public final class WordingManagerImpl<Wording>: Startable where Wording: Wording
             } catch WordingManagerProviderError.noRemoteWordingSupported {
                 break
             } catch {
-                logger.error("Failed to update wording for \(localization) localization: \(error.localizedDescription)")
+                logger.error("Failed to update wording for \(localization) localization: \(error.localizedDescription)", domain: .wording)
             }
         }
     }
@@ -157,7 +158,7 @@ public final class WordingManagerImpl<Wording>: Startable where Wording: Wording
         let wordingData = try await provider.wordingRemoteData(for: localization)
         var wording = try decoder.decode(from: wordingData)
 
-        logger.log("Successfully fetched wording for \(localization) localization")
+        logger.log("Successfully fetched wording for \(localization) localization", domain: .wording)
         mutateWordingWithFallbacks(&wording, using: localization)
 
         return wording
@@ -188,4 +189,8 @@ public final class WordingManagerImpl<Wording>: Startable where Wording: Wording
     // MARK: - Public interface
 
     public var wordingSubject: ValueSubject<Wording> { _wordingSubject }
+}
+
+extension LogDomain {
+    fileprivate static let wording: Self = "wording"
 }
