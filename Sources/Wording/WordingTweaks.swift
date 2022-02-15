@@ -1,6 +1,6 @@
 import Language
 import Tweak
 
-extension Tweak.ID.Localization {
-    public static var fetchAndUpdateWording = Tweak.ID()
+extension TweakID.Localization {
+    public static var fetchAndUpdateWording: TweakID { TweakID() }
 }
