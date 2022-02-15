@@ -4,9 +4,10 @@ import Foundation
 import Language
 import LocalizationManager
 import Logger
+import Tweak
 import Wording
 
-public final class WordingManagerImpl<Wording>: Startable where Wording: Wordingable {
+public final class WordingManagerImpl<Wording>: Startable, TweakReceiver where Wording: Wordingable {
     init(
         localizationManager: LocalizationManager,
         logger: Logger,
@@ -181,6 +182,16 @@ public final class WordingManagerImpl<Wording>: Startable where Wording: Wording
     // MARK: - Startable
 
     public func start() {
+        Task {
+            try await fetchWordingForAllLocalizations()
+        }
+    }
+
+    // MARK: - TweakReceiver
+
+    public func receive(_ tweak: Tweak) {
+        guard tweak.id == .Localization.fetchAndUpdateWording else { return }
+
         Task {
             try await fetchWordingForAllLocalizations()
         }

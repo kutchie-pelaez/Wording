@@ -27,6 +27,7 @@ let package = Package(
         .package(name: "Logging", url: "https://github.com/kutchie-pelaez-packages/Logging.git", .branch("master")),
         .package(name: "PathKit", url: "https://github.com/kylef/PathKit.git", from: "1.0.0"),
         .package(name: "SwiftCLI", url: "https://github.com/jakeheis/SwiftCLI.git", from: "6.0.0"),
+        .package(name: "Tweaks", url: "https://github.com/jakeheis/Tweaks.git", from: "6.0.0"),
         .package(name: "Yams", url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
     ],
     targets: [
@@ -37,6 +38,7 @@ let package = Package(
                 .product(name: "Language", package: "Localization"),
                 .product(name: "LocalizationManager", package: "Localization"),
                 .product(name: "Logger", package: "Logging"),
+                .product(name: "Tweak", package: "Tweaks"),
                 .target(name: "Wording")
             ]
         ),
@@ -44,6 +46,8 @@ let package = Package(
             name: "Wording",
             dependencies: [
                 .product(name: "Core", package: "Core"),
+                .product(name: "Language", package: "Localization"),
+                .product(name: "Tweak", package: "Tweaks"),
                 .product(name: "Yams", package: "Yams")
             ]
         ),
