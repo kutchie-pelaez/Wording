@@ -1,8 +1,4 @@
-enum WordingType:
-    String,
-    CustomStringConvertible
-{
-
+enum WordingType: String, CustomStringConvertible {
     case bundled
     case persisted
 
