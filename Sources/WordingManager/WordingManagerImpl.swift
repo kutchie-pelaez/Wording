@@ -7,7 +7,7 @@ import Logger
 import Tweak
 import Wording
 
-public final class WordingManagerImpl<Wording>: Startable, TweakReceiver where Wording: Wordingable {
+public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wordingable {
     init(
         localizationManager: LocalizationManager,
         logger: Logger,
@@ -19,6 +19,9 @@ public final class WordingManagerImpl<Wording>: Startable, TweakReceiver where W
         populateCahceWithBundledWording()
         populateCahceWithPersistedWording()
         subscribeToEvents()
+        Task {
+            try await fetchWordingForAllLocalizations()
+        }
     }
 
     private let localizationManager: LocalizationManager
@@ -185,14 +188,6 @@ public final class WordingManagerImpl<Wording>: Startable, TweakReceiver where W
             withIntermediateDirectories: true
         )
         try data.write(to: url)
-    }
-
-    // MARK: - Startable
-
-    public func start() {
-        Task {
-            try await fetchWordingForAllLocalizations()
-        }
     }
 
     // MARK: - TweakReceiver
