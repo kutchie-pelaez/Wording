@@ -83,9 +83,9 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
                     for: localization
                 )
 
-                logger.log("Successfully populate cache with \(wordingType) wording for \(localization) localization", domain: .wording)
+                logger.log("Successfully populated cache with \(wordingType) wording for \(localization) localization", domain: .wording)
             } catch {
-                let message = "Failed to populate cache with \(wordingType) wording for \(localization) localization: \(error.localizedDescription)"
+                let message = "Failed to populate cache with \(wordingType) wording for \(localization) localization, error: \(error.localizedDescription)"
 
                 switch wordingType {
                 case .bundled:
@@ -161,7 +161,7 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
             } catch WordingManagerProviderError.noRemoteWordingSupported {
                 break
             } catch {
-                logger.error("Failed to fetch wording for \(localization) localization: \(error.localizedDescription)", domain: .wording)
+                logger.error("Failed to fetch wording for \(localization) localization, error: \(error.localizedDescription)", domain: .wording)
             }
         }
     }
