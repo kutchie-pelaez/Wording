@@ -10,6 +10,6 @@ public struct WordingEncoder<Wording: Wordingable> {
     public func encode(_ wording: Wording) throws -> Data {
         let ymlString = try ymlEncoder.encode(wording)
 
-        return ymlString.utf8Data
+        return ymlString.data
     }
 }
