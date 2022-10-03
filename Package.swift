@@ -1,13 +1,19 @@
-// swift-tools-version:5.3.0
+// swift-tools-version:5.7
 
 import PackageDescription
 
 let package = Package(
     name: "Wording",
     platforms: [
-        .iOS("15")
+        .iOS(.v16)
     ],
     products: [
+        .library(
+            name: "Wording",
+            targets: [
+                "Wording"
+            ]
+        ),
         .library(
             name: "WordingManager",
             targets: [
@@ -15,48 +21,43 @@ let package = Package(
             ]
         ),
         .library(
-            name: "Wording",
+            name: "WordingManagerImpl",
             targets: [
-                "Wording"
+                "WordingManagerImpl"
             ]
         )
     ],
     dependencies: [
-        .package(name: "Core", url: "https://github.com/kutchie-pelaez-packages/Core.git", .branch("master")),
-        .package(name: "Localization", url: "https://github.com/kutchie-pelaez-packages/Localization.git", .branch("master")),
-        .package(name: "Logging", url: "https://github.com/kutchie-pelaez-packages/Logging.git", .branch("master")),
-        .package(name: "PathKit", url: "https://github.com/kylef/PathKit.git", from: "1.0.0"),
-        .package(name: "SwiftCLI", url: "https://github.com/jakeheis/SwiftCLI.git", from: "6.0.0"),
-        .package(name: "Tweaks", url: "https://github.com/jakeheis/Tweaks.git", from: "6.0.0"),
-        .package(name: "Yams", url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
+        .package(url: "https://github.com/kutchie-pelaez-packages/Core.git", branch: "master"),
+        .package(url: "https://github.com/kutchie-pelaez-packages/Localization.git", branch: "master"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
     ],
     targets: [
+        .target(
+            name: "Wording",
+            dependencies: [
+                .product(name: "Core", package: "Core"),
+                .product(name: "Language", package: "Localization"),
+                .product(name: "Yams", package: "Yams")
+            ]
+        ),
         .target(
             name: "WordingManager",
             dependencies: [
                 .product(name: "Core", package: "Core"),
                 .product(name: "Language", package: "Localization"),
                 .product(name: "LocalizationManager", package: "Localization"),
-                .product(name: "Logger", package: "Logging"),
-                .product(name: "Tweak", package: "Tweaks"),
                 .target(name: "Wording")
             ]
         ),
         .target(
-            name: "Wording",
+            name: "WordingManagerImpl",
             dependencies: [
                 .product(name: "Core", package: "Core"),
                 .product(name: "Language", package: "Localization"),
-                .product(name: "Tweak", package: "Tweaks"),
-                .product(name: "Yams", package: "Yams")
-            ]
-        ),
-        .target(
-            name: "WordingGenerator",
-            dependencies: [
-                .product(name: "PathKit", package: "PathKit"),
-                .product(name: "SwiftCLI", package: "SwiftCLI"),
-                .product(name: "Yams", package: "Yams")
+                .product(name: "LocalizationManager", package: "Localization"),
+                .target(name: "Wording"),
+                .target(name: "WordingManager")
             ]
         )
     ]

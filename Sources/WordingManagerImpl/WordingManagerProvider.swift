@@ -20,3 +20,7 @@ extension WordingManagerProvider {
         throw WordingManagerProviderError.noRemoteWordingSupported
     }
 }
+
+public enum WordingManagerProviderError: Error {
+    case noRemoteWordingSupported
+}

@@ -3,18 +3,54 @@ import Core
 import Foundation
 import Language
 import LocalizationManager
-import Logger
-import Tweak
 import Wording
+import WordingManager
+import Yams
 
-public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wordingable {
+final class WordingManagerImpl<
+    W: Wordingable,
+    LM: LocalizationManager,
+    WMP: WordingManagerProvider
+>: WordingManager {
+    private struct WordingDecoder {
+        private let ymlDecoder = YAMLDecoder()
+
+        func decode(from data: Data) throws -> W {
+            try ymlDecoder.decode(W.self, from: data)
+        }
+    }
+
+    private struct WordingEncoder {
+        private let ymlEncoder = YAMLEncoder()
+
+        func encode(_ wording: W) throws -> Data {
+            let ymlString = try ymlEncoder.encode(wording)
+
+            return safeUndefinedIfNil(
+                ymlString.data(using: .utf8),
+                Data()
+            )
+        }
+    }
+
+    private let localizationManager: LM
+    private let provider: WMP
+
+    private var cancellables = [AnyCancellable]()
+
+    private var cache = [Localization: W]()
+    private let wordingDecoder = WordingDecoder()
+    private let wordingEncoder = WordingEncoder()
+
+    private lazy var _wordingSubject = MutableValueSubject<W>(
+        wording(for: localizationManager.languageSubject.value.localization)
+    )
+
     init(
-        localizationManager: LocalizationManager,
-        logger: Logger,
-        provider: WordingManagerProvider
+        localizationManager: LM,
+        provider: WMP
     ) {
         self.localizationManager = localizationManager
-        self.logger = logger
         self.provider = provider
         populateCahceWithBundledWording()
         populateCahceWithPersistedWording()
@@ -24,21 +60,24 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
         }
     }
 
-    private let localizationManager: LocalizationManager
-    private let logger: Logger
-    private let provider: WordingManagerProvider
+    private func syncWording(for localization: Localization) {
+        let newWording = wording(for: localization)
+        _wordingSubject.value = newWording
+    }
 
-    private var cancellables = [AnyCancellable]()
+    private func populateCahceWithBundledWording() {
+        populateCacheForAllLocalizations(
+            provider.wordingBundledURL,
+            assertOnFailure: true
+        )
+    }
 
-    private var cache = [Localization: Wording]()
-    private let decoder = WordingDecoder<Wording>()
-    private let encoder = WordingEncoder<Wording>()
-
-    private lazy var _wordingSubject = MutableValueSubject<Wording>(
-        wording(for: localizationManager.languageSubject.value.localization)
-    )
-
-    // MARK: - Subscribe to events
+    private func populateCahceWithPersistedWording() {
+        populateCacheForAllLocalizations(
+            provider.wordingPersistedURL,
+            assertOnFailure: false
+        )
+    }
 
     private func subscribeToEvents() {
         localizationManager.languageSubject
@@ -48,32 +87,8 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
             .store(in: &cancellables)
     }
 
-    private func syncWording(for localization: Localization) {
-        let newWording = wording(for: localization)
-        _wordingSubject.value = newWording
-    }
-
-    // MARK: - Initial cache populating
-
-    private func populateCahceWithBundledWording() {
-        populateCacheForAllLocalizations(
-            provider.wordingBundledURL,
-            wordingType: .bundled,
-            assertOnFailure: true
-        )
-    }
-
-    private func populateCahceWithPersistedWording() {
-        populateCacheForAllLocalizations(
-            provider.wordingPersistedURL,
-            wordingType: .persisted,
-            assertOnFailure: false
-        )
-    }
-
     private func populateCacheForAllLocalizations(
         _ urlAccessor: (Localization) -> URL,
-        wordingType: WordingType,
         assertOnFailure: Bool
     ) {
         for localization in localizationManager.supportedLocalizations.englishFirst {
@@ -82,21 +97,9 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
                     from: urlAccessor(localization),
                     for: localization
                 )
-
-                logger.log("Successfully populated cache with \(wordingType) wording for \(localization) localization", domain: .wording)
             } catch {
-                let message = "Failed to populate cache with \(wordingType) wording for \(localization) localization, error: \(error.localizedDescription)"
-
-                switch wordingType {
-                case .bundled:
-                    logger.error(message, domain: .wording)
-
-                case .persisted:
-                    logger.warning(message, domain: .wording)
-                }
-
                 if assertOnFailure {
-                    safeCrash()
+                    assertionFailure()
                 }
 
                 continue
@@ -109,16 +112,14 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
         for localization: Localization
     ) throws {
         let data = try Data(contentsOf: url)
-        var wording = try decoder.decode(from: data)
+        var wording = try wordingDecoder.decode(from: data)
 
         mutateWordingWithFallbacks(&wording, using: localization)
         cache[localization] = wording
     }
 
-    // MARK: - Providing fallback
-
     private func mutateWordingWithFallbacks(
-        _ wording: inout Wording,
+        _ wording: inout W,
         using localization: Localization
     ) {
         if
@@ -133,7 +134,7 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
         }
     }
 
-    private func wording(for localization: Localization) -> Wording {
+    private func wording(for localization: Localization) -> W {
         safeUndefinedIfNil(
             cache[localization],
             undefinedIfNil(
@@ -143,8 +144,6 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
             "Failed to get cached wording for \(localization) localization"
         )
     }
-
-    // MARK: - Fetching & persisting
 
     private func fetchWordingForAllLocalizations() async throws {
         for localization in localizationManager.supportedLocalizations.localizationFirst(localizationManager.languageSubject.value.localization) {
@@ -160,28 +159,25 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
                 syncWording(for: localization)
             } catch WordingManagerProviderError.noRemoteWordingSupported {
                 break
-            } catch {
-                logger.error("Failed to fetch wording for \(localization) localization, error: \(error.localizedDescription)", domain: .wording)
             }
         }
     }
 
-    private func fetchWording(for localization: Localization) async throws -> Wording {
+    private func fetchWording(for localization: Localization) async throws -> W {
         let wordingData = try await provider.wordingRemoteData(for: localization)
-        var wording = try decoder.decode(from: wordingData)
+        var wording = try wordingDecoder.decode(from: wordingData)
 
-        logger.log("Successfully fetched wording for \(localization) localization", domain: .wording)
         mutateWordingWithFallbacks(&wording, using: localization)
 
         return wording
     }
 
     private func persistFetchedWording(
-        _ wording: Wording,
+        _ wording: W,
         for localization: Localization
     ) throws {
         let url = provider.wordingPersistedURL(for: localization)
-        let data = try encoder.encode(wording)
+        let data = try wordingEncoder.encode(wording)
 
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
@@ -190,21 +186,7 @@ public final class WordingManagerImpl<Wording>: TweakReceiver where Wording: Wor
         try data.write(to: url)
     }
 
-    // MARK: - TweakReceiver
+    // MARK: - WordingManager
 
-    public func receive(_ tweak: Tweak) {
-        guard tweak.id == .Localization.fetchAndUpdateWording else { return }
-
-        Task {
-            try await fetchWordingForAllLocalizations()
-        }
-    }
-
-    // MARK: - Public interface
-
-    public var wordingSubject: ValueSubject<Wording> { _wordingSubject }
-}
-
-extension LogDomain {
-    fileprivate static let wording: Self = "wording"
+    public var wordingSubject: ValueSubject<W> { _wordingSubject }
 }
