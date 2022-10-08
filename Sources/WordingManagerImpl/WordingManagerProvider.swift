@@ -3,24 +3,24 @@ import Foundation
 import Language
 
 public protocol WordingManagerProvider {
-    func wordingBundledURL(for localization: Localization) -> URL
-    func wordingPersistedURL(for localization: Localization) -> URL
-    func wordingRemoteData(for localization: Localization) async throws -> Data
+    func bundledWordingURL(for localization: Localization) -> URL
+    func persistedWordingURL(for localization: Localization) -> URL
+    func remoteWordingData(for localization: Localization) async throws -> Data
 }
 
 extension WordingManagerProvider {
-    public func wordingPersistedURL(for localization: Localization) -> URL {
+    public func persistedWordingURL(for localization: Localization) -> URL {
         FileManager.default
             .documents
             .appendingPathComponent("wording")
             .appendingPathComponent("wording_\(localization.identifier).yml")
     }
 
-    public func wordingRemoteData(for localization: Localization) async throws -> Data {
-        throw WordingManagerProviderError.noRemoteWordingSupported
+    public func remoteWordingData(for localization: Localization) async throws -> Data {
+        throw WordingManagerProviderError.remoteWordingIsNotSupported
     }
 }
 
-public enum WordingManagerProviderError: Error {
-    case noRemoteWordingSupported
+enum WordingManagerProviderError: Error {
+    case remoteWordingIsNotSupported
 }

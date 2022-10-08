@@ -5,188 +5,97 @@ import Language
 import LocalizationManager
 import Wording
 import WordingManager
-import Yams
 
 final class WordingManagerImpl<
     W: Wordingable,
     LM: LocalizationManager,
     WMP: WordingManagerProvider
 >: WordingManager {
-    private struct WordingDecoder {
-        private let ymlDecoder = YAMLDecoder()
-
-        func decode(from data: Data) throws -> W {
-            try ymlDecoder.decode(W.self, from: data)
-        }
-    }
-
-    private struct WordingEncoder {
-        private let ymlEncoder = YAMLEncoder()
-
-        func encode(_ wording: W) throws -> Data {
-            let ymlString = try ymlEncoder.encode(wording)
-
-            return safeUndefinedIfNil(
-                ymlString.data(using: .utf8),
-                Data()
-            )
-        }
-    }
-
+    private let wordingType: W.Type
     private let localizationManager: LM
     private let provider: WMP
 
+    private let decoder = WordingDecoder()
+    private let fileManager = FileManager.default
+
     private var cancellables = [AnyCancellable]()
 
-    private var cache = [Localization: W]()
-    private let wordingDecoder = WordingDecoder()
-    private let wordingEncoder = WordingEncoder()
-
-    private lazy var _wordingSubject = MutableValueSubject<W>(
-        wording(for: localizationManager.languageSubject.value.localization)
-    )
-
     init(
+        wordingType: W.Type,
         localizationManager: LM,
         provider: WMP
     ) {
+        self.wordingType = wordingType
         self.localizationManager = localizationManager
         self.provider = provider
-        populateCahceWithBundledWording()
-        populateCahceWithPersistedWording()
-        subscribeToEvents()
-        Task {
-            try await fetchWordingForAllLocalizations()
-        }
+        setWordingForCurrentLocalization()
+        subscribeToLanguageChangeEvents()
     }
 
-    private func syncWording(for localization: Localization) {
-        let newWording = wording(for: localization)
-        _wordingSubject.value = newWording
+    private func setWordingForCurrentLocalization() {
+        setWording(for: localizationManager.languageSubject.value.localization)
     }
 
-    private func populateCahceWithBundledWording() {
-        populateCacheForAllLocalizations(
-            provider.wordingBundledURL,
-            assertOnFailure: true
-        )
-    }
-
-    private func populateCahceWithPersistedWording() {
-        populateCacheForAllLocalizations(
-            provider.wordingPersistedURL,
-            assertOnFailure: false
-        )
-    }
-
-    private func subscribeToEvents() {
+    private func subscribeToLanguageChangeEvents() {
         localizationManager.languageSubject
-            .sink { [weak self] newLanguage in
-                self?.syncWording(for: newLanguage.localization)
+            .sink { [weak self] language in
+                self?.setWording(for: language.localization)
             }
             .store(in: &cancellables)
     }
 
-    private func populateCacheForAllLocalizations(
-        _ urlAccessor: (Localization) -> URL,
-        assertOnFailure: Bool
-    ) {
-        for localization in localizationManager.supportedLocalizations.englishFirst {
-            do {
-                try populateCache(
-                    from: urlAccessor(localization),
-                    for: localization
-                )
-            } catch {
-                if assertOnFailure {
-                    assertionFailure()
-                }
-
-                continue
-            }
-        }
-    }
-
-    private func populateCache(
-        from url: URL,
-        for localization: Localization
-    ) throws {
-        let data = try Data(contentsOf: url)
-        var wording = try wordingDecoder.decode(from: data)
-
-        mutateWordingWithFallbacks(&wording, using: localization)
-        cache[localization] = wording
-    }
-
-    private func mutateWordingWithFallbacks(
-        _ wording: inout W,
-        using localization: Localization
-    ) {
-        if
-            localization != .en,
-            let cachedLocalizedWording = cache[localization]
-        {
-            wording.mutate(using: cachedLocalizedWording)
+    private func setWording(for localization: Localization) {
+        if localization != .en {
+            setWording(for: .en)
         }
 
-        if let cachedEnWording = cache[.en] {
-            wording.mutate(using: cachedEnWording)
+        do {
+            try setWording(at: provider.bundledWordingURL(for: localization))
+        } catch {
+            assertionFailure()
         }
+
+        do {
+            try setWording(at: provider.persistedWordingURL(for: localization))
+        } catch { }
     }
 
-    private func wording(for localization: Localization) -> W {
-        safeUndefinedIfNil(
-            cache[localization],
-            undefinedIfNil(
-                cache[.en],
-                "Failed to get cached en wording"
-            ),
-            "Failed to get cached wording for \(localization) localization"
-        )
+    private func setWording(at wordingURL: URL) throws {
+        let wordingData = try Data(contentsOf: wordingURL)
+        let wording = try decoder.decode(from: wordingData)
+        wordingType.complement(using: wording)
     }
 
     private func fetchWordingForAllLocalizations() async throws {
-        for localization in localizationManager.supportedLocalizations.localizationFirst(localizationManager.languageSubject.value.localization) {
+        for localization in localizationManager.supportedLocalizations.localizationFirst(
+            localizationManager.languageSubject.value.localization
+        ) {
             do {
-                let wording = try await fetchWording(for: localization)
-
-                try persistFetchedWording(
-                    wording,
-                    for: localization
-                )
-
-                cache[localization] = wording
-                syncWording(for: localization)
-            } catch WordingManagerProviderError.noRemoteWordingSupported {
+                let wordingData = try await provider.remoteWordingData(for: localization)
+                try persistFetchedWordingData(wordingData, for: localization)
+            } catch WordingManagerProviderError.remoteWordingIsNotSupported {
                 break
-            }
+            } catch { }
         }
     }
 
-    private func fetchWording(for localization: Localization) async throws -> W {
-        let wordingData = try await provider.wordingRemoteData(for: localization)
-        var wording = try wordingDecoder.decode(from: wordingData)
-
-        mutateWordingWithFallbacks(&wording, using: localization)
-
-        return wording
-    }
-
-    private func persistFetchedWording(
-        _ wording: W,
+    private func persistFetchedWordingData(
+        _ wordingData: Data,
         for localization: Localization
     ) throws {
-        let url = provider.wordingPersistedURL(for: localization)
-        let data = try wordingEncoder.encode(wording)
-
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try data.write(to: url)
+        let persistedWordingURL = provider.persistedWordingURL(for: localization)
+        try fileManager.createDirectory(at: persistedWordingURL.deletingLastPathComponent())
+        try wordingData.write(to: persistedWordingURL)
     }
 
-    // MARK: - WordingManager
+    // MARK: - Startable
 
-    public var wordingSubject: ValueSubject<W> { _wordingSubject }
+    func start() {
+        Task {
+            do {
+                try await fetchWordingForAllLocalizations()
+                setWordingForCurrentLocalization()
+            } catch { }
+        }
+    }
 }

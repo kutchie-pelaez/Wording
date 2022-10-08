@@ -5,15 +5,13 @@ import WordingManager
 public struct WordingManagerFactory {
     public init() { }
 
-    public func produce<
-        W: Wordingable,
-        LM: LocalizationManager,
-        WMP: WordingManagerProvider
-    >(
-        localizationManager: LM,
-        provider: WMP
+    public func produce(
+        wordingType: (some Wordingable).Type,
+        localizationManager: some LocalizationManager,
+        provider: some WordingManagerProvider
     ) -> some WordingManager {
-        WordingManagerImpl<W, LM, WMP>(
+        WordingManagerImpl(
+            wordingType: wordingType,
             localizationManager: localizationManager,
             provider: provider
         )

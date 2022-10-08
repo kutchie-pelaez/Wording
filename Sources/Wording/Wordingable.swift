@@ -1,3 +1,3 @@
-public protocol Wordingable: Codable {
-    mutating func mutate(using fallback: Self)
+public protocol Wordingable {
+    static func complement(using wording: [String: Any])
 }

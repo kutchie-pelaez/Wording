@@ -25,29 +25,25 @@ let package = Package(
             targets: [
                 "WordingManagerImpl"
             ]
+        ),
+        .plugin(
+            name: "WordingGenerationPlugin",
+            targets: [
+                "WordingGenerationPlugin"
+            ]
         )
     ],
     dependencies: [
+        .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Core.git", branch: "master"),
-        .package(url: "https://github.com/kutchie-pelaez-packages/Localization.git", branch: "master"),
-        .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
+        .package(url: "https://github.com/kutchie-pelaez-packages/Localization.git", branch: "master")
     ],
     targets: [
-        .target(
-            name: "Wording",
-            dependencies: [
-                .product(name: "Core", package: "Core"),
-                .product(name: "Language", package: "Localization"),
-                .product(name: "Yams", package: "Yams")
-            ]
-        ),
+        .target(name: "Wording"),
         .target(
             name: "WordingManager",
             dependencies: [
-                .product(name: "Core", package: "Core"),
-                .product(name: "Language", package: "Localization"),
-                .product(name: "LocalizationManager", package: "Localization"),
-                .target(name: "Wording")
+                .product(name: "Core", package: "Core")
             ]
         ),
         .target(
@@ -58,6 +54,19 @@ let package = Package(
                 .product(name: "LocalizationManager", package: "Localization"),
                 .target(name: "Wording"),
                 .target(name: "WordingManager")
+            ]
+        ),
+        .executableTarget(
+            name: "WordingGenerationPluginTool",
+            dependencies: [
+                .product(name: "Yams", package: "Yams")
+            ]
+        ),
+        .plugin(
+            name: "WordingGenerationPlugin",
+            capability: .buildTool(),
+            dependencies: [
+                .target(name: "WordingGenerationPluginTool")
             ]
         )
     ]
