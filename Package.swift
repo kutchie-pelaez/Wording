@@ -50,7 +50,7 @@ let package = Package(
             name: "WordingManagerImpl",
             dependencies: [
                 .product(name: "Core", package: "Core"),
-                .product(name: "Language", package: "Localization"),
+                .product(name: "Localization", package: "Localization"),
                 .product(name: "LocalizationManager", package: "Localization"),
                 .target(name: "Wording"),
                 .target(name: "WordingManager")

@@ -1,6 +1,6 @@
 import Core
 import Foundation
-import Language
+import Localization
 
 public protocol WordingManagerProvider {
     func bundledWordingURL(for localization: Localization) -> URL

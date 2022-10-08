@@ -1,7 +1,7 @@
 import Combine
 import Core
 import Foundation
-import Language
+import Localization
 import LocalizationManager
 import Wording
 import WordingManager
