@@ -3,9 +3,7 @@ import Wording
 import WordingManager
 
 public struct WordingManagerFactory {
-    public init() { }
-
-    public func produce(
+    public static func produce(
         wordingType: (some Wordingable).Type,
         localizationManager: some LocalizationManager,
         provider: some WordingManagerProvider
