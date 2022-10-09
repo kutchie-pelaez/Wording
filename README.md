@@ -22,7 +22,7 @@ Assume this is your `Localizable.strings` file:
 "feed.title" = "See what's new";
 
 /* Projects */
-"title" = "My projects";
+"projects.title" = "My projects";
 
 /* Common */
 "common.close" = "Close";
@@ -65,7 +65,7 @@ public enum Wording: Wordingable {
     private static func complement(using wording: [String: Any], path: String?) {
         for (key, value) in wording {
             let path = [path, key]
-                .compactMap { $0}
+                .compactMap { $0 }
                 .joined(separator: ".")
 
             if let leaf = value as? String {

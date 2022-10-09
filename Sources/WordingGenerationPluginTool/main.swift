@@ -76,7 +76,7 @@ private func writeMainBody() throws {
             private static func complement(using wording: [String: Any], path: String?) {
                 for (key, value) in wording {
                     let path = [path, key]
-                        .compactMap { $0}
+                        .compactMap { $0 }
                         .joined(separator: ".")
 
                     if let leaf = value as? String {
