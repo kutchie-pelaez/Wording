@@ -57,37 +57,37 @@ func appendWordingString(_ string: String) throws {
 
 private func writeImportStatements() throws {
     try appendWordingString(
-            """
-            import Wording
-            """.newLined(2)
+        """
+        import Wording
+        """.newLined(2)
     )
 }
 
 private func writeMainBody() throws {
     try appendWordingString(
-            """
-            public enum Wording: Wordingable {
-                fileprivate static var wording = [String: String]()
+        """
+        public enum Wording: Wordingable {
+            fileprivate static var wording = [String: String]()
 
-                public static func complement(using wording: [String: Any]) {
-                    complement(using: wording, path: nil)
-                }
+            public static func complement(using wording: [String: Any]) {
+                complement(using: wording, path: nil)
+            }
 
-                private static func complement(using wording: [String: Any], path: String?) {
-                    for (key, value) in wording {
-                        let path = [path, key]
-                            .compactMap { $0}
-                            .joined(separator: ".")
+            private static func complement(using wording: [String: Any], path: String?) {
+                for (key, value) in wording {
+                    let path = [path, key]
+                        .compactMap { $0}
+                        .joined(separator: ".")
 
-                        if let leaf = value as? String {
-                            Self.wording[path] = leaf
-                        } else if let node = value as? [String: Any] {
-                            complement(using: node, path: path)
-                        }
+                    if let leaf = value as? String {
+                        Self.wording[path] = leaf
+                    } else if let node = value as? [String: Any] {
+                        complement(using: node, path: path)
                     }
                 }
             }
-            """.newLined(2)
+        }
+        """.newLined(2)
     )
 }
 
@@ -106,9 +106,9 @@ private func writeWordingNode(
         let propertyChain = chain.joined(separator: ".")
 
         try appendWordingString(
-                """
-                public static var \(nodeKey.lowercasingFirstLetter()): String { leaf("\(propertyChain)") }
-                """.indented(indentation).newLined(addAdditionalNewLine ? 2 : 1)
+            """
+            public static var \(nodeKey.lowercasingFirstLetter()): String { leaf("\(propertyChain)") }
+            """.indented(indentation).newLined(addAdditionalNewLine ? 2 : 1)
         )
 
     case let .mapping(mapping):
@@ -116,17 +116,17 @@ private func writeWordingNode(
 
         if isRoot {
             try appendWordingString(
-                    """
-                    extension Wording {
-                    """.indented(indentation).newLined(1)
+                """
+                extension Wording {
+                """.indented(indentation).newLined(1)
             )
         } else {
             guard let nodeKey else { return }
 
             try appendWordingString(
-                    """
-                    public enum \(nodeKey.capitalizingFirstLetter()) {
-                    """.indented(indentation).newLined(1)
+                """
+                public enum \(nodeKey.capitalizingFirstLetter()) {
+                """.indented(indentation).newLined(1)
             )
         }
 
@@ -157,9 +157,9 @@ private func writeWordingNode(
         }
 
         try appendWordingString(
-                """
-                }
-                """.indented(indentation).newLined(addAdditionalNewLine ? 2 : 1)
+            """
+            }
+            """.indented(indentation).newLined(addAdditionalNewLine ? 2 : 1)
         )
 
     default:
@@ -173,16 +173,16 @@ private func writeNewLine() throws {
 
 private func writeLeafFunction() throws {
     try appendWordingString(
-            #"""
-            private func leaf(_ path: String) -> String {
-                guard let leafValue = Wording.wording[path] else {
-                    assertionFailure("No wording value for \(path)")
-                    return ""
-                }
-
-                return leafValue
+        #"""
+        private func leaf(_ path: String) -> String {
+            guard let leafValue = Wording.wording[path] else {
+                assertionFailure("No wording value for \(path)")
+                return ""
             }
-            """#.newLined(1)
+
+            return leafValue
+        }
+        """#.newLined(1)
     )
 }
 
