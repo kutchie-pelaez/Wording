@@ -17,11 +17,7 @@ final class WordingManagerImpl<
     private let currentLanguage = Locale.current.language
     private let logger = Logger(label: "WordingManager")
 
-    init(
-        wordingType: W.Type,
-        localizationManager: LM,
-        provider: WMP
-    ) {
+    init(wordingType: W.Type, localizationManager: LM, provider: WMP) {
         self.wordingType = wordingType
         self.localizationManager = localizationManager
         self.provider = provider
@@ -103,7 +99,7 @@ final class WordingManagerImpl<
         try wordingData.write(to: persistedWordingURL)
     }
 
-    // MARK: - Startable
+    // MARK: Startable
 
     func start() {
         Task {
