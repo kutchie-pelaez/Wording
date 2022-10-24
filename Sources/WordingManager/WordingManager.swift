@@ -1,3 +1,3 @@
-import Core
+import CoreUtils
 
 public protocol WordingManager: Startable { }

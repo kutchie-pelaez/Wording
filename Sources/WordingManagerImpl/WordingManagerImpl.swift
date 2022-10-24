@@ -1,8 +1,7 @@
-import Combine
 import Core
 import Foundation
-import Localization
 import LocalizationManager
+import Logging
 import Wording
 import WordingManager
 
@@ -15,10 +14,8 @@ final class WordingManagerImpl<
     private let localizationManager: LM
     private let provider: WMP
 
-    private let decoder = WordingDecoder()
-    private let fileManager = FileManager.default
-
-    private var cancellables = [AnyCancellable]()
+    private let currentLanguage = Locale.current.language
+    private let logger = Logger(label: "WordingManager")
 
     init(
         wordingType: W.Type,
@@ -28,63 +25,81 @@ final class WordingManagerImpl<
         self.wordingType = wordingType
         self.localizationManager = localizationManager
         self.provider = provider
-        setWordingForCurrentLocalization()
-        subscribeToLanguageChangeEvents()
+        setWording(for: currentLanguage)
     }
 
-    private func setWordingForCurrentLocalization() {
-        setWording(for: localizationManager.languageSubject.value.localization)
-    }
+    private func setWording(for language: Locale.Language) {
+        let defaultLanguage = localizationManager.defaultLanguage
+        let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
 
-    private func subscribeToLanguageChangeEvents() {
-        localizationManager.languageSubject
-            .sink { [weak self] language in
-                self?.setWording(for: language.localization)
-            }
-            .store(in: &cancellables)
-    }
-
-    private func setWording(for localization: Localization) {
-        if localization != .en {
-            setWording(for: .en)
+        if language != defaultLanguage {
+            setWording(for: defaultLanguage)
         }
 
         do {
-            try setWording(at: provider.bundledWordingURL(for: localization))
+            logger.info("Setting bundled wording", metadata: [
+                "language": .string(languageIdentifier)
+            ])
+            try setWording(at: provider.bundledWordingURL(for: language))
         } catch {
+            logger.critical("Failed to set bundled wording", metadata: [
+                "language": .string(languageIdentifier),
+                "error": .string(error.localizedDescription)
+            ])
             assertionFailure()
         }
 
         do {
-            try setWording(at: provider.persistedWordingURL(for: localization))
-        } catch { }
+            logger.info("Setting persisted wording", metadata: [
+                "language": .string(languageIdentifier)
+            ])
+            try setWording(at: provider.persistedWordingURL(for: language))
+        } catch {
+            logger.notice("No persisted wording found", metadata: [
+                "language": .string(languageIdentifier),
+                "error": .string(error.localizedDescription)
+            ])
+        }
     }
 
     private func setWording(at wordingURL: URL) throws {
+        let wordingDecoder = WordingDecoder()
         let wordingData = try Data(contentsOf: wordingURL)
-        let wording = try decoder.decode(from: wordingData)
+        let wording = try wordingDecoder.decode(from: wordingData)
         wordingType.complement(using: wording)
     }
 
-    private func fetchWordingForAllLocalizations() async throws {
-        for localization in localizationManager.supportedLocalizations.localizationFirst(
-            localizationManager.languageSubject.value.localization
-        ) {
+    private func fetchWordingForAllLanguages() async {
+        for language in localizationManager.supportedLanguages.elementFirst(currentLanguage) {
+            let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
+
             do {
-                let wordingData = try await provider.remoteWordingData(for: localization)
-                try persistFetchedWordingData(wordingData, for: localization)
+                logger.info("Fetching remote wording", metadata: [
+                    "language": .string(languageIdentifier)
+                ])
+                let wordingData = try await provider.remoteWordingData(for: language)
+                try persistFetchedWordingData(wordingData, for: language)
             } catch WordingManagerProviderError.remoteWordingIsNotSupported {
                 break
-            } catch { }
+            } catch {
+                logger.error("Failed to fetch remote wording", metadata: [
+                    "language": .string(languageIdentifier),
+                    "error": .string(error.localizedDescription)
+                ])
+            }
         }
     }
 
     private func persistFetchedWordingData(
         _ wordingData: Data,
-        for localization: Localization
+        for language: Locale.Language
     ) throws {
-        let persistedWordingURL = provider.persistedWordingURL(for: localization)
-        try fileManager.createDirectory(at: persistedWordingURL.deletingLastPathComponent())
+        let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
+        logger.info("Persisting fetched wording", metadata: [
+            "language": .string(languageIdentifier)
+        ])
+        let persistedWordingURL = try provider.persistedWordingURL(for: language)
+        try FileManager.default.createDirectory(at: persistedWordingURL.deletingLastPathComponent())
         try wordingData.write(to: persistedWordingURL)
     }
 
@@ -92,10 +107,8 @@ final class WordingManagerImpl<
 
     func start() {
         Task {
-            do {
-                try await fetchWordingForAllLocalizations()
-                setWordingForCurrentLocalization()
-            } catch { }
+            await fetchWordingForAllLanguages()
+            setWording(for: currentLanguage)
         }
     }
 }
