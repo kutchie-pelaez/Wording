@@ -15,7 +15,7 @@ final class WordingManagerImpl<
     private let provider: WMP
 
     private let currentLanguage = Locale.current.language
-    private let logger = Logger(label: "WordingManager")
+    private let logger = Logger(label: "Wording")
 
     init(wordingType: W.Type, localizationManager: LM, provider: WMP) {
         self.wordingType = wordingType
