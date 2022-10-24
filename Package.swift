@@ -24,6 +24,7 @@ let package = Package(
         ]),
         .target(name: "WordingManagerImpl", dependencies: [
             .product(name: "Core", package: "Core"),
+            .product(name: "CoreUtils", package: "Core"),
             .product(name: "LocalizationManager", package: "Localization"),
             .product(name: "Logging", package: "swift-log"),
             .target(name: "Wording"),

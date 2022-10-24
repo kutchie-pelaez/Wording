@@ -38,26 +38,26 @@ final class WordingManagerImpl<
 
         do {
             logger.info("Setting bundled wording", metadata: [
-                "language": .string(languageIdentifier)
+                "language": "\(languageIdentifier)"
             ])
             try setWording(at: provider.bundledWordingURL(for: language))
         } catch {
             logger.critical("Failed to set bundled wording", metadata: [
-                "language": .string(languageIdentifier),
-                "error": .string(error.localizedDescription)
+                "language": "\(languageIdentifier)",
+                "error": "\(error.localizedDescription)"
             ])
             assertionFailure()
         }
 
         do {
             logger.info("Setting persisted wording", metadata: [
-                "language": .string(languageIdentifier)
+                "language": "\(languageIdentifier)"
             ])
             try setWording(at: provider.persistedWordingURL(for: language))
         } catch {
-            logger.notice("No persisted wording found", metadata: [
-                "language": .string(languageIdentifier),
-                "error": .string(error.localizedDescription)
+            logger.notice("Failed to set persisted wording", metadata: [
+                "language": "\(languageIdentifier)",
+                "error": "\(error.localizedDescription)"
             ])
         }
     }
@@ -75,7 +75,7 @@ final class WordingManagerImpl<
 
             do {
                 logger.info("Fetching remote wording", metadata: [
-                    "language": .string(languageIdentifier)
+                    "language": "\(languageIdentifier)"
                 ])
                 let wordingData = try await provider.remoteWordingData(for: language)
                 try persistFetchedWordingData(wordingData, for: language)
@@ -83,8 +83,8 @@ final class WordingManagerImpl<
                 break
             } catch {
                 logger.error("Failed to fetch remote wording", metadata: [
-                    "language": .string(languageIdentifier),
-                    "error": .string(error.localizedDescription)
+                    "language": "\(languageIdentifier)",
+                    "error": "\(error.localizedDescription)"
                 ])
             }
         }
@@ -96,7 +96,7 @@ final class WordingManagerImpl<
     ) throws {
         let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
         logger.info("Persisting fetched wording", metadata: [
-            "language": .string(languageIdentifier)
+            "language": "\(languageIdentifier)"
         ])
         let persistedWordingURL = try provider.persistedWordingURL(for: language)
         try FileManager.default.createDirectory(at: persistedWordingURL.deletingLastPathComponent())
