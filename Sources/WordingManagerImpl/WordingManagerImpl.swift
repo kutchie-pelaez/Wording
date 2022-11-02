@@ -2,6 +2,7 @@ import Core
 import Foundation
 import LocalizationManager
 import Logging
+import Undefined
 import Wording
 import WordingManager
 
@@ -26,7 +27,7 @@ final class WordingManagerImpl<
 
     private func setWording(for language: Locale.Language) {
         let defaultLanguage = localizationManager.defaultLanguage
-        let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
+        let languageCodeIdentifier = languageCodeIdentifier(for: language)
 
         if language != defaultLanguage {
             setWording(for: defaultLanguage)
@@ -34,26 +35,26 @@ final class WordingManagerImpl<
 
         do {
             logger.info("Setting bundled wording", metadata: [
-                "language": "\(languageIdentifier)"
+                "language": "\(languageCodeIdentifier)"
             ])
             try setWording(at: provider.bundledWordingURL(for: language))
         } catch {
             logger.critical("Failed to set bundled wording", metadata: [
-                "language": "\(languageIdentifier)",
-                "error": "\(error.localizedDescription)"
+                "language": "\(languageCodeIdentifier)",
+                "error": "\(error)"
             ])
             assertionFailure()
         }
 
         do {
             logger.info("Setting persisted wording", metadata: [
-                "language": "\(languageIdentifier)"
+                "language": "\(languageCodeIdentifier)"
             ])
             try setWording(at: provider.persistedWordingURL(for: language))
         } catch {
             logger.notice("Failed to set persisted wording", metadata: [
-                "language": "\(languageIdentifier)",
-                "error": "\(error.localizedDescription)"
+                "language": "\(languageCodeIdentifier)",
+                "error": "\(error)"
             ])
         }
     }
@@ -66,12 +67,11 @@ final class WordingManagerImpl<
     }
 
     private func fetchWordingForAllLanguages() async {
-        for language in localizationManager.supportedLanguages.elementFirst(currentLanguage) {
-            let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
-
+        for language in localizationManager.supportedLanguages.reorderingElementFirst(currentLanguage) {
+            let languageCodeIdentifier = languageCodeIdentifier(for: language)
             do {
                 logger.info("Fetching remote wording", metadata: [
-                    "language": "\(languageIdentifier)"
+                    "language": "\(languageCodeIdentifier)"
                 ])
                 let wordingData = try await provider.remoteWordingData(for: language)
                 try persistFetchedWordingData(wordingData, for: language)
@@ -79,20 +79,16 @@ final class WordingManagerImpl<
                 break
             } catch {
                 logger.error("Failed to fetch remote wording", metadata: [
-                    "language": "\(languageIdentifier)",
-                    "error": "\(error.localizedDescription)"
+                    "language": "\(languageCodeIdentifier)",
+                    "error": "\(error)"
                 ])
             }
         }
     }
 
-    private func persistFetchedWordingData(
-        _ wordingData: Data,
-        for language: Locale.Language
-    ) throws {
-        let languageIdentifier = safeUndefinedIfNil(language.languageCode?.identifier, "")
+    private func persistFetchedWordingData(_ wordingData: Data, for language: Locale.Language) throws {
         logger.info("Persisting fetched wording", metadata: [
-            "language": "\(languageIdentifier)"
+            "language": "\(languageCodeIdentifier(for: language))"
         ])
         let persistedWordingURL = try provider.persistedWordingURL(for: language)
         try FileManager.default.createDirectory(at: persistedWordingURL.deletingLastPathComponent())
@@ -107,4 +103,15 @@ final class WordingManagerImpl<
             setWording(for: currentLanguage)
         }
     }
+}
+
+private func languageCodeIdentifier(for language: Locale.Language) -> String {
+    safeUndefinedIfNil(
+        language.languageCode?.identifier,
+        fallback: "en",
+        message: "Null language code identefier",
+        metadata: [
+            "languageMaximalIdentifier": language.maximalIdentifier
+        ]
+    )
 }

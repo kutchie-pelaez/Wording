@@ -13,6 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
+        .package(url: "https://github.com/jpsim/Undefined.git", from: "5.0.0"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Core.git", branch: "master"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Localization.git", branch: "master")
@@ -27,6 +28,7 @@ let package = Package(
             .product(name: "CoreUtils", package: "Core"),
             .product(name: "LocalizationManager", package: "Localization"),
             .product(name: "Logging", package: "swift-log"),
+            .product(name: "Undefined", package: "Undefined"),
             .target(name: "Wording"),
             .target(name: "WordingManager")
         ]),
